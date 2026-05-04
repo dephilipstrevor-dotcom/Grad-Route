@@ -236,7 +236,7 @@ const HeroSection = () => {
 }
 
 /* ==============================
-   Live Interpretation
+   Live Interpretation (Terminal UI only)
    ============================== */
 const LiveInterpretation = () => {
   return (
@@ -256,18 +256,10 @@ const LiveInterpretation = () => {
           </ul>
         </div>
 
+        {/* Right side – Terminal UI (always visible, no image) */}
         <div className="relative flex justify-center">
           <div className="bg-brand-panel/30 backdrop-blur-sm border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm">
-            <img 
-              src="/girl-illustration.png" 
-              alt="Analytics illustration" 
-              className="w-full h-auto object-contain"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
-              }}
-            />
-            <div className="hidden space-y-4 font-mono text-xs">
+            <div className="space-y-4 font-mono text-xs">
               <div className="flex items-start gap-3 text-gray-400">
                 <span className="text-brand-copper">&gt;</span>
                 <p>Analyzing parameter: <span className="text-white">GPA 8.25</span></p>
