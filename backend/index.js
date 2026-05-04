@@ -9,7 +9,7 @@ const chatRoutes = require('./routes/chatRoutes')
 const app = express()
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5000'],
+  origin: ['http://localhost:5173', 'http://localhost:5000', 'https://grad-route.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
