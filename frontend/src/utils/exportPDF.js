@@ -1,0 +1,146 @@
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+
+/**
+ * Formats a number as Indian currency (e.g., ₹1,50,000).
+ * If the number is huge, it shows in lakhs (as we do across the UI).
+ */
+const formatINR = (value) => {
+  if (value === undefined || value === null) return '–'
+  const lakhs = value / 100000
+  if (lakhs >= 0.01) {
+    return `₹ ${lakhs.toFixed(1)} Lakhs`
+  }
+  return `₹ ${new Intl.NumberFormat('en-IN').format(value)}`
+}
+
+/**
+ * Converts a feasibility number to a coloured text span.
+ */
+const feasibilityColor = (score) => {
+  if (score >= 80) return '#22c55e'
+  if (score >= 60) return '#f59e0b'
+  return '#ef4444'
+}
+
+export const exportRouteToPDF = async (route) => {
+  if (!route) {
+    console.error('No route data provided for PDF export')
+    return
+  }
+
+  // ---- 1. Build hidden report container ----
+  const container = document.createElement('div')
+  container.style.position = 'absolute'
+  container.style.left = '-9999px'
+  container.style.top = '0'
+  container.style.width = '760px'          // A4-ish width for good resolution
+  container.style.padding = '40px'
+  container.style.fontFamily = 'Inter, system-ui, -apple-system, sans-serif'
+  container.style.backgroundColor = '#ffffff'
+  container.style.color = '#1A1A24'
+
+  container.innerHTML = `
+    <!-- Header -->
+    <div style="border-bottom:2px solid #e5e7eb; padding-bottom:16px; margin-bottom:24px;">
+      <h1 style="font-size:28px; font-weight:700; color:#E05D36; margin:0 0 8px 0;">GradRoute Report</h1>
+      <p style="font-size:14px; color:#6b7280; margin:0;">
+        ${route.university || 'N/A'} — ${route.program || ''}
+        <span style="display:block; font-size:12px; color:#9ca3af; margin-top:4px;">${route.country || ''}</span>
+      </p>
+    </div>
+
+    <!-- 2. Core Metrics (2x3 Grid) -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:32px;">
+      <div>
+        <p style="font-size:11px; color:#9ca3af; margin:0 0 4px; text-transform:uppercase;">Feasibility</p>
+        <p style="font-size:28px; font-weight:700; color:${feasibilityColor(route.feasibility)}; margin:0;">
+          ${route.feasibility || 0}%
+        </p>
+      </div>
+      <div>
+        <p style="font-size:11px; color:#9ca3af; margin:0 0 4px; text-transform:uppercase;">Tier</p>
+        <p style="font-size:28px; font-weight:700; color:#1A1A24; margin:0; text-transform:uppercase;">
+          ${(route.tier || 'moderate').toUpperCase()}
+        </p>
+      </div>
+      <div>
+        <p style="font-size:11px; color:#9ca3af; margin:0 0 4px; text-transform:uppercase;">Total Cost</p>
+        <p style="font-size:22px; font-weight:700; color:#1A1A24; margin:0;">
+          ${formatINR(route.total_cost)}
+        </p>
+      </div>
+      <div>
+        <p style="font-size:11px; color:#9ca3af; margin:0 0 4px; text-transform:uppercase;">PR Timeline</p>
+        <p style="font-size:22px; font-weight:700; color:#1A1A24; margin:0;">
+          ${route.pr_timeline || 48} months
+        </p>
+      </div>
+      <div>
+        <p style="font-size:11px; color:#9ca3af; margin:0 0 4px; text-transform:uppercase;">ROI Vector</p>
+        <p style="font-size:16px; font-weight:600; color:#1A1A24; margin:0;">
+          ${route.roi_vector || 'N/A'}
+        </p>
+      </div>
+      <div>
+        <p style="font-size:11px; color:#9ca3af; margin:0 0 4px; text-transform:uppercase;">Market Demand</p>
+        <p style="font-size:16px; font-weight:600; color:#1A1A24; margin:0;">
+          ${route.market_demand || 'Medium'}
+        </p>
+      </div>
+    </div>
+
+    <!-- 3. Financial Overview (clean list) -->
+    <h2 style="font-size:18px; font-weight:700; color:#1A1A24; margin:0 0 12px; border-top:1px solid #e5e7eb; padding-top:24px;">Financial Overview</h2>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; border-bottom:1px dotted #d1d5db; padding-bottom:4px;">
+        <span style="font-size:14px; color:#6b7280;">Tuition Fees</span>
+        <span style="font-size:14px; font-weight:600; color:#1A1A24;">${formatINR((route.total_cost || 0) * 0.4)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; border-bottom:1px dotted #d1d5db; padding-bottom:4px;">
+        <span style="font-size:14px; color:#6b7280;">Living Costs</span>
+        <span style="font-size:14px; font-weight:600; color:#1A1A24;">${formatINR((route.total_cost || 0) * 0.6)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
+        <span style="font-size:14px; color:#6b7280;">Total</span>
+        <span style="font-size:14px; font-weight:700; color:#E05D36;">${formatINR(route.total_cost)}</span>
+      </div>
+    </div>
+
+    <!-- 4. Footer -->
+    <p style="font-size:10px; color:#9ca3af; text-align:center; margin-top:32px; border-top:1px solid #e5e7eb; padding-top:12px;">
+      Generated by GradRoute Engine · For guidance only
+    </p>
+  `
+
+  document.body.appendChild(container)
+
+  try {
+    const canvas = await html2canvas(container, { scale: 2 })   // 2x for sharp text
+    const imgData = canvas.toDataURL('image/png')
+    const imgWidth = 190                         // A4 width minus margins
+    const pageHeight = 297                       // A4 height
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    let heightLeft = imgHeight
+    let position = 10                            // top margin
+
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    // If content overflows, add pages
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    pdf.save(`GradRoute_${(route.university || 'route').replace(/\s/g, '_')}.pdf`)
+  } catch (err) {
+    console.error('PDF generation failed:', err)
+    alert('Could not generate PDF. See console for details.')
+  } finally {
+    document.body.removeChild(container)
+  }
+}
